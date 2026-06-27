@@ -1422,6 +1422,8 @@
       }
 
       // ===== 音乐控制 — 尽力自动播放，兜底点击播放 =====
+      // 全局帧计数器，用于节流 Canvas 动画帧率，确保音频流畅
+      let gFrame = 0;
       const bgm = document.getElementById('bgm');
       const musicToggle = document.getElementById('musicToggle');
       const musicIconOn = document.getElementById('musicIconOn');
@@ -1605,6 +1607,7 @@
       }
 
       function animateFW() {
+        gFrame++;
         fwCtx.globalCompositeOperation = 'destination-out';
         fwCtx.fillStyle = 'rgba(0,0,0,0.18)';
         fwCtx.fillRect(0, 0, fwW, fwH);
@@ -1778,6 +1781,11 @@
 
       // 每帧检查歌词
       function lyricsLoop() {
+        // 每 2 帧检查一次
+        if (gFrame % 2 !== 0) {
+          requestAnimationFrame(lyricsLoop);
+          return;
+        }
         updateLyrics();
         requestAnimationFrame(lyricsLoop);
       }
@@ -1860,6 +1868,11 @@
       let windOffset = 0;
 
       function animatePetals() {
+        // 每 3 帧渲染一次，降低主线程压力
+        if (gFrame % 3 !== 0) {
+          requestAnimationFrame(animatePetals);
+          return;
+        }
         const Wp = petalCanvas.width,
           Hp = petalCanvas.height;
         ptCtx.clearRect(0, 0, Wp, Hp);
@@ -1934,6 +1947,11 @@
       }
 
       function animateFF() {
+        // 每 4 帧渲染一次
+        if (gFrame % 4 !== 0) {
+          requestAnimationFrame(animateFF);
+          return;
+        }
         const W = ffCanvas.width,
           H = ffCanvas.height;
         ffCtx.clearRect(0, 0, W, H);
@@ -2075,6 +2093,11 @@
       }
 
       function animateBF() {
+        // 每 4 帧渲染一次
+        if (gFrame % 4 !== 0) {
+          requestAnimationFrame(animateBF);
+          return;
+        }
         const W = bfCanvas.width,
           H = bfCanvas.height;
         bfCtx.clearRect(0, 0, W, H);
