@@ -220,6 +220,8 @@
       z-index: 2;
       border: none;
       transition: opacity 0.6s ease, transform 0.6s ease;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
 
     .envelope.fade-out {
@@ -450,7 +452,9 @@
       transform: scale(0.5) translateY(0);
       opacity: 0;
       transition: transform 1.0s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.01s ease;
-      will-change: transform;
+      will-change: transform, opacity;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
       overflow: visible;
     }
 
@@ -990,10 +994,28 @@
         margin-left: -155px;
         margin-top: -260px;
         padding: 24px 16px 16px;
+        transform: scale(0.42) translateY(0);
+        will-change: auto;
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.35), 0 2px 0 #ddd2be, 0 4px 0 #cfc4ad, inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      }
+
+      .letter.sliding {
+        transform: scale(0.42) translateY(-160px);
       }
 
       .letter.show {
-        transform: scale(1.08);
+        animation: letterSettleMobile 1.0s cubic-bezier(0.34, 1.25, 0.64, 1) forwards,
+          letterGlow 3.5s ease-in-out 1.0s infinite alternate;
+      }
+
+      @keyframes letterSettleMobile {
+        0% {
+          transform: scale(0.42) translateY(-160px);
+        }
+
+        100% {
+          transform: scale(0.98) translateY(0);
+        }
       }
 
       .cake-container svg {
@@ -1399,6 +1421,7 @@
       }
       const clickHint = document.getElementById('clickHint');
       let isOpened = false;
+      const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) || window.innerWidth < 768;
 
       // ===== 星空 =====
       const starsContainer = document.getElementById('starsContainer');
@@ -1513,7 +1536,7 @@
       }
 
       function burst(x, y, palette) {
-        const n = 180 + Math.floor(Math.random() * 240);
+        const n = isMobile ? (60 + Math.floor(Math.random() * 80)) : (180 + Math.floor(Math.random() * 240));
         const type = Math.random();
         for (let i = 0; i < n; i++) {
           let angle, speed, life, size;
@@ -2124,13 +2147,16 @@
         initFireworks();
         ffActive = true;
         bfActive = true;
-        for (let i = 0; i < 15; i++) setTimeout(spawnFirefly, i * 180);
-        for (let i = 0; i < 4; i++) setTimeout(spawnButterfly, i * 600 + 400);
+        const fireflyCount = isMobile ? 6 : 15;
+        const butterflyCount = isMobile ? 2 : 4;
+        for (let i = 0; i < fireflyCount; i++) setTimeout(spawnFirefly, i * 180);
+        for (let i = 0; i < butterflyCount; i++) setTimeout(spawnButterfly, i * 600 + 400);
 
         // 3. 全屏花瓣飘落
-        spawnPetals(30);
-        setTimeout(() => spawnPetals(25), 900);
-        setTimeout(() => spawnPetals(20), 1800);
+        const petalBase = isMobile ? 15 : 30;
+        spawnPetals(petalBase);
+        setTimeout(() => spawnPetals(Math.floor(petalBase * 0.8)), 900);
+        setTimeout(() => spawnPetals(Math.floor(petalBase * 0.6)), 1800);
 
         // 4. 信纸从信封中向上抽出（封口打开后开始）
         setTimeout(() => letter.classList.add('sliding'), 600);
