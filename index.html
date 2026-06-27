@@ -1080,7 +1080,7 @@
     <div class="lyrics-line" id="lyricsNext"></div>
   </div>
 
-  <audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
+  <audio id="bgm" src="bgm.mp3" type="audio/mpeg" loop preload="auto" playsinline crossorigin="anonymous"></audio>
 
   <div class="music-toggle" id="musicToggle" title="音乐">
     <span class="music-tip" id="musicTip">♪ 音乐</span>
@@ -1443,43 +1443,64 @@
       const musicIconOn = document.getElementById('musicIconOn');
       const musicIconOff = document.getElementById('musicIconOff');
       let musicPlaying = false;
+      let musicPlayAttempted = false;
 
       bgm.volume = 0.4;
-      // 预加载确保可用
-      bgm.load();
 
       function startMusic() {
         if (musicPlaying) return;
-        bgm.play().then(() => {
-          musicPlaying = true;
-          musicIconOn.style.display = '';
-          musicIconOff.style.display = 'none';
-          musicToggle.classList.remove('paused');
-        }).catch(() => {
-          // 浏览器阻止了，显示暂停图标等待用户交互
-          musicIconOn.style.display = 'none';
-          musicIconOff.style.display = '';
-          musicToggle.classList.add('paused');
-        });
+        if (musicPlayAttempted) return;
+        musicPlayAttempted = true;
+        // 等待音频缓冲足够再播放
+        const doPlay = () => {
+          bgm.play().then(() => {
+            musicPlaying = true;
+            musicPlayAttempted = false;
+            musicIconOn.style.display = '';
+            musicIconOff.style.display = 'none';
+            musicToggle.classList.remove('paused');
+          }).catch(() => {
+            // 浏览器阻止自动播放，等待用户交互
+            musicPlayAttempted = false;
+            musicIconOn.style.display = 'none';
+            musicIconOff.style.display = '';
+            musicToggle.classList.add('paused');
+          });
+        };
+        if (bgm.readyState >= 3) {
+          doPlay();
+        } else {
+          bgm.addEventListener('canplaythrough', doPlay, {
+            once: true
+          });
+          // 超时兜底：1.5秒后无论缓冲如何都尝试
+          setTimeout(() => {
+            if (!musicPlaying) {
+              musicPlayAttempted = false;
+              doPlay();
+            }
+          }, 1500);
+        }
       }
 
-      // 多重策略自动播放
+      // 首次尝试自动播放
       startMusic();
-      // 延迟再试（某些浏览器在DOM完全加载后允许）
-      setTimeout(startMusic, 500);
-      setTimeout(startMusic, 1500);
-      // 任何用户交互时触发
-      document.addEventListener('click', startMusic, {
+
+      // 任何用户交互时作为兜底触发
+      function userInteractionPlay() {
+        if (musicPlaying) return;
+        musicPlayAttempted = false;
+        startMusic();
+      }
+      document.addEventListener('click', userInteractionPlay, {
         once: false
       });
-      document.addEventListener('touchstart', startMusic, {
+      document.addEventListener('touchstart', userInteractionPlay, {
         once: false
       });
-      document.addEventListener('keydown', startMusic, {
+      document.addEventListener('keydown', userInteractionPlay, {
         once: false
       });
-      // DOM完全就绪后再试
-      window.addEventListener('DOMContentLoaded', () => setTimeout(startMusic, 200));
 
       musicToggle.addEventListener('click', function (e) {
         e.stopPropagation();
