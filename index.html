@@ -604,28 +604,46 @@
       animation: flameFadeOut 2.8s ease-out forwards;
     }
 
-    .mic-hint {
+    .flame-hint {
       position: absolute;
       bottom: 28px;
       left: 50%;
       transform: translateX(-50%);
       font-family: 'Ma Shan Zheng', serif;
       font-size: 14px;
-      color: rgba(200, 160, 140, 0.7);
+      color: rgba(200, 160, 140, 0.6);
       opacity: 0;
-      transition: opacity 0.8s ease;
+      transition: opacity 2s ease;
       pointer-events: none;
       z-index: 5;
       letter-spacing: 2px;
+      white-space: nowrap;
     }
 
-    .mic-hint.show {
+    .flame-hint.show {
       opacity: 1;
     }
 
-    .mic-hint.done {
+    .flame-hint.countdown {
+      color: rgba(200, 140, 100, 0.8);
+      animation: hintPulse 1.2s ease-in-out infinite;
+    }
+
+    .flame-hint.done {
       opacity: 0;
-      transition: opacity 0.4s ease;
+      transition: opacity 1.5s ease;
+    }
+
+    @keyframes hintPulse {
+
+      0%,
+      100% {
+        opacity: 0.6;
+      }
+
+      50% {
+        opacity: 1;
+      }
     }
 
     @keyframes flameFadeOut {
@@ -1310,7 +1328,7 @@
           <div class="blessing-text">请继续做那个'有点奇怪'的大人。<br>二十岁最大的特权，就是可以理直气壮地犯错，<br>然后拍拍土站起来说'我乐意'。<br><span
               class="highlight">20岁生日快乐<br>天天开心</span></div>
         </div>
-        <div class="mic-hint" id="micHint">吹一口气试试~</div>
+        <div class="flame-hint" id="flameHint">烛光微微摇曳…</div>
       </div>
 
       <div class="click-hint" id="clickHint">轻触打开</div>
@@ -1332,62 +1350,28 @@
       const blessingRawHTML = blessingTextEl.innerHTML;
       blessingTextEl.innerHTML = '';
 
-      // ===== 麦克风吹蜡烛 =====
-      let micActive = false;
-      let audioCtx = null;
-      let analyser = null;
+      // ===== 30秒后蜡烛自然熄灭 =====
+      function startFlameTimer() {
+        const flameHint = document.getElementById('flameHint');
+        // 0.8s后渐显提示
+        setTimeout(() => {
+          flameHint.classList.add('show');
+        }, 800);
 
-      function startMicListener() {
-        if (micActive) return;
-        micActive = true;
-        const micHint = document.getElementById('micHint');
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          // 降级方案：无麦克风时自动渐灭
-          setTimeout(() => {
-            flame.classList.add('fading');
-            smoke.classList.add('rise');
-          }, 2400);
-          return;
-        }
-        navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: false
-        }).then(stream => {
-          audioCtx = new(window.AudioContext || window.webkitAudioContext)();
-          analyser = audioCtx.createAnalyser();
-          analyser.fftSize = 256;
-          const source = audioCtx.createMediaStreamSource(stream);
-          source.connect(analyser);
-          // 显示提示
-          micHint.classList.add('show');
-          checkBlow();
-        }).catch(() => {
-          // 降级：自动渐灭
-          setTimeout(() => {
-            flame.classList.add('fading');
-            smoke.classList.add('rise');
-          }, 2400);
-        });
-      }
+        // 25s后进入倒计时，提示闪烁
+        setTimeout(() => {
+          flameHint.textContent = '烛光将尽…';
+          flameHint.classList.add('countdown');
+        }, 25000);
 
-      function checkBlow() {
-        if (!micActive || !analyser) return;
-        const data = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(data);
-        let energy = 0;
-        for (let i = 8; i < data.length; i++) energy += data[i];
-        energy /= data.length - 8;
-
-        if (energy > 28) {
+        // 30s后火焰渐渐熄灭
+        setTimeout(() => {
           flame.classList.add('fading');
           smoke.classList.add('rise');
-          const micHint = document.getElementById('micHint');
-          micHint.classList.add('done');
-          micActive = false;
-          if (audioCtx) audioCtx.close();
-          return;
-        }
-        requestAnimationFrame(checkBlow);
+          flameHint.textContent = '烛光已熄';
+          flameHint.classList.remove('countdown');
+          flameHint.classList.add('done');
+        }, 30000);
       }
 
       // ===== 打字机效果 → 升级为字符级渐入动画（Kinetic Typography）=====
@@ -2191,8 +2175,8 @@
         // 7. 蛋糕实体化
         setTimeout(() => {
           cakeContainer.classList.add('solid');
-          // 激活麦克风吹蜡烛
-          startMicListener();
+          // 30秒后蜡烛自然熄灭
+          startFlameTimer();
         }, 2700);
 
         // 8. 祝福语打字机 + 大量花瓣
